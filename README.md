@@ -35,6 +35,7 @@ Everything Jot adds is marked and yours.
 | <kbd>SUPER</kbd>+<kbd>N</kbd>           | Open the overlay, once you add it     |
 | type                                    | Compose the thought                   |
 | <kbd>Shift</kbd>+<kbd>Enter</kbd>       | New line — the thought stays one item |
+| <kbd>Ctrl</kbd>+<kbd>J</kbd>            | New line, same as Shift+Enter         |
 | <kbd>Enter</kbd>                        | Append to the inbox and close         |
 | <kbd>Esc</kbd> / empty <kbd>Enter</kbd> | Close without saving                  |
 | click outside the card                  | Close without saving                  |
@@ -57,6 +58,19 @@ lines:
     }
 
 `file` is where captures land (created on first capture).
+
+`command` is optional. When set, captures skip the file and are piped, as
+typed, into that command's stdin — for an inbox that lives in another tool:
+
+    {
+      "command": ["kernl", "capture"]
+    }
+
+It is an argv, not a shell string. `file` and `template` are ignored while it
+is set, and a command that fails raises the same "Jot couldn't save" toast as a
+failed write. Jot runs inside the shell, not your terminal, so neither your
+interactive `PATH` nor variables exported by your shell rc reach the command:
+give it an absolute path and pass any configuration as arguments.
 
 `template` is the line format: `{text}` is your thought; everything else goes through
 `date(1)`, so any strftime code works — or delete the codes for no
