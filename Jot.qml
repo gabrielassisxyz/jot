@@ -142,7 +142,13 @@ Item {
           anchors.left: parent.left
           anchors.right: parent.right
           anchors.verticalCenter: parent.verticalCenter
-          text: root.text || "Jot something down…"
+          // Text lays out no line after a trailing newline, so the card would
+          // only grow once the new line had a character in it. A zero-width
+          // space gives that empty line a height; it is display only and never
+          // reaches the capture.
+          text: root.text
+            ? root.text + (root.text.endsWith("\n") ? "​" : "")
+            : "Jot something down…"
           // A capture is text, never markup. Under the default AutoText a
           // thought like "<div> needs margin" is guessed to be rich text: the
           // tags disappear from the card and \n stops breaking lines, while
