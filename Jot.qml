@@ -113,7 +113,8 @@ Item {
           if (event.key === Qt.Key_Escape) {
             root.dismiss()
             event.accepted = true
-          } else if (isEnter && (event.modifiers & Qt.ShiftModifier)) {
+          } else if ((isEnter && (event.modifiers & Qt.ShiftModifier))
+                     || (event.key === Qt.Key_J && event.modifiers === Qt.ControlModifier)) {
             root.text = root.text + "\n"
             event.accepted = true
           } else if (isEnter) {
