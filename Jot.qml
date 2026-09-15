@@ -31,7 +31,7 @@ Item {
   readonly property int cornerRadius: Style.cornerRadius
   property int contentMargin: Style.spacing.panelPadding
   property int headerHeight: Math.max(Style.space(34), Style.font.title + Style.spacing.controlPaddingY * 2)
-  property int cardWidth: Math.min(Style.space(300), panel.width - Style.gapsOut * 2)
+  property int cardWidth: Math.min(Style.space(600), panel.width - Style.gapsOut * 2)
   property int cardHeight: Math.min(
     contentMargin * 2 + Math.max(headerHeight, contentText.contentHeight + Style.spacing.controlPaddingY * 2),
     panel.height - Style.gapsOut * 2)
