@@ -31,7 +31,7 @@ Item {
   readonly property int cornerRadius: Style.cornerRadius
   property int contentMargin: Style.spacing.panelPadding
   property int headerHeight: Math.max(Style.space(34), Style.font.title + Style.spacing.controlPaddingY * 2)
-  property int cardWidth: Math.min(Style.space(300), panel.width - Style.gapsOut * 2)
+  property int cardWidth: Math.min(Style.space(600), panel.width - Style.gapsOut * 2)
   property int cardHeight: Math.min(
     contentMargin * 2 + Math.max(headerHeight, contentText.contentHeight + Style.spacing.controlPaddingY * 2),
     panel.height - Style.gapsOut * 2)
@@ -113,7 +113,8 @@ Item {
           if (event.key === Qt.Key_Escape) {
             root.dismiss()
             event.accepted = true
-          } else if (isEnter && (event.modifiers & Qt.ShiftModifier)) {
+          } else if ((isEnter && (event.modifiers & Qt.ShiftModifier))
+                     || (event.key === Qt.Key_J && event.modifiers === Qt.ControlModifier)) {
             root.text = root.text + "\n"
             event.accepted = true
           } else if (isEnter) {
@@ -141,7 +142,13 @@ Item {
           anchors.left: parent.left
           anchors.right: parent.right
           anchors.verticalCenter: parent.verticalCenter
-          text: root.text || "Jot something down…"
+          // Text lays out no line after a trailing newline, so the card would
+          // only grow once the new line had a character in it. A zero-width
+          // space gives that empty line a height; it is display only and never
+          // reaches the capture.
+          text: root.text
+            ? root.text + (root.text.endsWith("\n") ? "​" : "")
+            : "Jot something down…"
           // A capture is text, never markup. Under the default AutoText a
           // thought like "<div> needs margin" is guessed to be rich text: the
           // tags disappear from the card and \n stops breaking lines, while

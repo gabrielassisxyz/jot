@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# jot-append — append one captured thought to the configured inbox file.
+# jot-append — append one captured thought to the configured inbox file, or
+# pipe it into the configured command when there is one.
 # Usage: jot-append <text>. Multi-line text lands as one markdown todo:
 # the first line goes through the template, continuation lines are
 # indented two spaces (markdown list continuation).
@@ -26,6 +27,14 @@ fail() {
     omarchy-notification-send "Jot couldn't save" " $text" || true
   exit 1
 }
+
+# A configured command takes the capture verbatim on stdin — no template, no
+# continuation indent: the tool on the other end owns the format and the time.
+mapfile -t command < <("$HERE/jot-config" --command)
+if ((${#command[@]} > 0)); then
+  printf '%s' "$text" | "${command[@]}" >/dev/null 2>&1 || fail
+  exit 0
+fi
 
 file="" template=""
 { IFS= read -r file; IFS= read -r template; } < <("$HERE/jot-config")

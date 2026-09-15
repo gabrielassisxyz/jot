@@ -301,6 +301,81 @@ check "append: dash-leading notification carries the text" \
   grep -q "buy milk" "$LOG"
 chmod 755 "$SB/ro"
 
+# --- jot-append: piping into a command ---------------------------------------
+# A configured command replaces the file: the capture goes to its stdin as
+# typed, and the file is never written.
+
+command_sandbox() { # <exit status the command returns>
+  fresh_sandbox
+  cat >"$SB/bin/sink" <<SHIM
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >"$SB/sink.args"
+cat >"$SB/sink.in"
+exit $1
+SHIM
+  chmod +x "$SB/bin/sink"
+  mkdir -p "$SB/.config/jot"
+}
+
+command_sandbox 0
+printf '{"command":["sink","capture","--"]}' >"$SB/.config/jot/config.json"
+run "$HERE/bin/jot-append" $'\nfirst\n  second line\n' && rc=0 || rc=$?
+check "command: exits 0 when the command succeeds" [ "$rc" = "0" ]
+check "command: receives its configured arguments" [ "$(cat "$SB/sink.args")" = "capture --" ]
+check "command: stdin is the capture, edges trimmed, interior verbatim" \
+  [ "$(cat "$SB/sink.in")" = $'first\n  second line' ]
+check "command: the inbox file is never written" not test -e "$SB/notes/inbox.md"
+
+command_sandbox 0
+printf '{"command":["sink"]}' >"$SB/.config/jot/config.json"
+run "$HERE/bin/jot-append" '50% off & a/b \ test'
+check "command: metacharacters reach stdin literally" \
+  [ "$(cat "$SB/sink.in")" = '50% off & a/b \ test' ]
+
+command_sandbox 3
+printf '{"command":["sink"]}' >"$SB/.config/jot/config.json"
+run "$HERE/bin/jot-append" "precious thought" && rc=0 || rc=$?
+check "command: a failing command exits non-zero" [ "$rc" != "0" ]
+check "command: a failing command notifies with the text" \
+  grep -qE "^omarchy-notification-send Jot couldn't save +precious thought" "$LOG"
+check "command: a failing command never falls back to the file" not test -e "$SB/notes/inbox.md"
+
+command_sandbox 0
+printf '{"command":["jot-no-such-command"]}' >"$SB/.config/jot/config.json"
+run "$HERE/bin/jot-append" "precious thought" && rc=0 || rc=$?
+check "command: a missing command exits non-zero" [ "$rc" != "0" ]
+check "command: a missing command notifies" grep -q "^omarchy-notification-send Jot couldn't save" "$LOG"
+
+command_sandbox 0
+printf '{"command":["sink"]}' >"$SB/.config/jot/config.json"
+run "$HERE/bin/jot-append" $'  \n '
+check "command: whitespace-only never runs the command" not test -e "$SB/sink.in"
+
+# Anything short of an argv of non-empty single-line strings is no command at
+# all, so the capture lands in the file exactly as it would without the key.
+for bad in '"sink"' '[]' '["sink",1]' '["sink",""]' '["sink","a\nb"]'; do
+  command_sandbox 0
+  printf '{"command":%s,"template":"- {text}"}' "$bad" >"$SB/.config/jot/config.json"
+  run "$HERE/bin/jot-append" "hello"
+  check "command: unusable $bad falls back to the file" [ "$(cat "$SB/notes/inbox.md" 2>/dev/null)" = '- hello' ]
+  check "command: unusable $bad never runs" not test -e "$SB/sink.in"
+done
+
+fresh_sandbox
+mkdir -p "$SB/.config/jot"
+printf '{"command":["kernl","capture"]}' >"$SB/.config/jot/config.json"
+out="$(run "$HERE/bin/jot-config")"
+check "config: a command leaves the two-line contract alone" [ "$(wc -l <<<"$out")" -eq 2 ]
+check "config: --command prints one argument per line" \
+  [ "$(run "$HERE/bin/jot-config" --command)" = $'kernl\ncapture' ]
+
+fresh_sandbox
+mkdir -p "$SB/.config/jot"
+printf 'not json' >"$SB/.config/jot/config.json"
+out="$(run "$HERE/bin/jot-config" --command 2>&1)"
+check "config: --command on broken JSON prints nothing" [ -z "$out" ]
+check "config: --command on broken JSON leaves the notice to the file path" [ ! -s "$LOG" ]
+
 # --- jot-open-inbox ----------------------------------------------------------
 
 fresh_sandbox

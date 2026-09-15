@@ -5,9 +5,25 @@
 # Both lines are enforced, not assumed: a config that fails to supply a usable
 # string for either key gets the default rather than a malformed line.
 # Missing file/keys fall back to defaults; broken JSON notifies and falls back.
+#
+# `jot-config --command` answers a different question: the argv of the command
+# a capture is piped into instead of the file, one argument per line. It prints
+# nothing when no usable command is configured, and stays silent about broken
+# JSON — the caller falls back to the file path, which reports it.
 set -u
 
 CONFIG="$HOME/.config/jot/config.json"
+
+if [[ ${1:-} == --command ]]; then
+  [[ -f $CONFIG ]] || exit 0
+  # All or nothing: an argv with a non-string or multi-line element can't be
+  # passed through faithfully, so it reads as unset rather than as half a command.
+  jq -r '.command? // empty
+    | select(type == "array" and length > 0)
+    | select(all(.[]; type == "string" and length > 0 and (contains("\n") | not)))
+    | .[]' "$CONFIG" 2>/dev/null || true
+  exit 0
+fi
 DEFAULT_FILE="$HOME/notes/inbox.md"
 DEFAULT_TEMPLATE='- [ ] %Y-%m-%d %H:%M {text}'
 
